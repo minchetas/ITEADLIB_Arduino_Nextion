@@ -15,6 +15,8 @@
 #include "NexHardware.h"
 
 #define NEX_RET_CMD_FINISHED            (0x01)
+#define NEX_RET_AUTO_SLEEP_MODE         (0x86)
+#define NEX_RET_AUTO_AWAKE_MODE         (0x87)
 #define NEX_RET_EVENT_LAUNCHED          (0x88)
 #define NEX_RET_EVENT_UPGRADED          (0x89)
 #define NEX_RET_EVENT_TOUCH_HEAD            (0x65)     
@@ -31,6 +33,13 @@
 #define NEX_RET_INVALID_BAUD            (0x11)
 #define NEX_RET_INVALID_VARIABLE        (0x1A)
 #define NEX_RET_INVALID_OPERATION       (0x1B)
+
+// Events
+#define NEX_EVENT_AUTO_WAKEUP    0
+#define NEX_EVENT_AUTO_SLEEP     1
+
+ NexTouchEventCb __cb_pop;
+ void *__cbpop_ptr;
 
 /*
  * Receive uint32_t data. 
@@ -217,6 +226,58 @@ bool recvRetCommandFinished(uint32_t timeout)
 }
 
 
+/*
+ * Return current page id.
+ * @param pageId - output parameter,to save page id.
+ * @RetVal true - success.
+ * @RetVal false - failed.
+ * Delay was 50. changed to 10. 
+ *
+ */
+
+bool sendCurrentPageId(uint8_t *pageId) {
+
+    bool ret = false;
+    uint8_t temp[5] = {0};
+
+    if (!pageId){
+        goto __return;
+    }
+    sendCommand("sendme");
+    delay(10); //
+    nexSerial.setTimeout(500);
+    if (sizeof(temp) != nexSerial.readBytes((char *)temp, sizeof(temp))){
+        goto __return;
+    }
+
+    if (temp[0] == NEX_RET_CURRENT_PAGE_ID_HEAD
+        && temp[2] == 0xFF
+        && temp[3] == 0xFF
+        && temp[4] == 0xFF){
+        *pageId = temp[1];
+        ret = true;
+    }
+
+__return:
+
+    if (ret){
+        dbSerial.print("recvPageId :");
+        dbSerial.println(*pageId);
+    }else{
+        dbSerial.println("recvPageId err");
+    }
+
+    return ret;
+}
+
+
+
+void nextionAttachEvent(NexTouchEventCb callback, void *ptr) {
+    __cb_pop = callback;
+    __cbpop_ptr = ptr;
+}
+
+
 bool nexInit(void)
 {
     bool ret1 = false;
@@ -262,6 +323,46 @@ void nexLoop(NexTouch *nex_listen_list[])
                 
             }
         }
+
+
+        if (NEX_RET_AUTO_SLEEP_MODE == c) {
+            if (nexSerial.available() >= 3){
+                __buffer[0] = c;  
+                for (i = 1; i < 4; i++)
+                {
+                    __buffer[i] = nexSerial.read();
+                }
+                __buffer[i] = 0x00;
+                
+                if (0xFF == __buffer[1] && 0xFF == __buffer[2] && 0xFF == __buffer[3]){
+                    dbSerial.print("[nextion] Entering sleep mode");
+
+                    //NexScreen::eventCallback();
+
+                    if (__cb_pop){
+                        __cb_pop(__cbpop_ptr);
+                    }
+
+                }
+            }                
+        }
+                        
+
+        if (NEX_RET_AUTO_AWAKE_MODE == c) {
+            if (nexSerial.available() >= 3){
+                __buffer[0] = c;  
+                for (i = 1; i < 4; i++)
+                {
+                    __buffer[i] = nexSerial.read();
+                }
+                __buffer[i] = 0x00;
+                
+                if (0xFF == __buffer[1] && 0xFF == __buffer[2] && 0xFF == __buffer[3]){
+                    dbSerial.print("[nextion] Leaving sleep mode");
+                }
+            }                                        
+        }
+
     }
 }
 
