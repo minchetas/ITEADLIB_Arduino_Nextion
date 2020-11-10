@@ -63,11 +63,4 @@ bool NexScreen::setScreenTouchTimeout(int buffer) {
 	return recvRetCommandFinished();
 }
 
-void NexScreen::eventCallback(void)
-{
-    /*if (__cb_event)
-    {
-        __cb_event();
-    }*/
-}
 

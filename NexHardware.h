@@ -20,6 +20,13 @@
 #include "NexScreen.h"
 
 /**
+ * Type of callback function when a event occurs. 
+ *  
+ * @return none. 
+ */
+typedef void (*NexEventCb)();
+
+/**
  * @addtogroup CoreAPI 
  * @{ 
  */
@@ -52,7 +59,10 @@ bool recvRetNumber(uint32_t *number, uint32_t timeout = 100);
 uint16_t recvRetString(char *buffer, uint16_t len, uint32_t timeout = 100);
 void sendCommand(const char* cmd);
 bool recvRetCommandFinished(uint32_t timeout = 100);
+
 bool sendCurrentPageId(uint8_t* pageId);
-void nextionAttachEvent(NexTouchEventCb callback, void *ptr = NULL);
+void nextionOnWakeup(NexEventCb callback);
+void nextionOnSleep(NexEventCb callback);
+void nextionOnCurrentPage(NexEventCb callback);
 
 #endif /* #ifndef __NEXHARDWARE_H__ */

@@ -38,8 +38,8 @@
 #define NEX_EVENT_AUTO_WAKEUP    0
 #define NEX_EVENT_AUTO_SLEEP     1
 
- NexTouchEventCb __cb_pop;
- void *__cbpop_ptr;
+NexEventCb __cb_onwakeup; 
+NexEventCb __cb_onsleep; 
 
 /*
  * Receive uint32_t data. 
@@ -261,22 +261,22 @@ bool sendCurrentPageId(uint8_t *pageId) {
 __return:
 
     if (ret){
-        dbSerial.print("recvPageId :");
-        dbSerial.println(*pageId);
+        dbSerialPrint("recvPageId :");
+        dbSerialPrintln(*pageId);
     }else{
-        dbSerial.println("recvPageId err");
+        dbSerialPrintln("recvPageId err");
     }
 
     return ret;
 }
 
-
-
-void nextionAttachEvent(NexTouchEventCb callback, void *ptr) {
-    __cb_pop = callback;
-    __cbpop_ptr = ptr;
+void nextionOnWakeup(NexEventCb callback) {
+    __cb_onwakeup = callback;
 }
 
+void nextionOnSleep(NexEventCb callback) {
+    __cb_onsleep = callback;
+}
 
 bool nexInit(void)
 {
@@ -335,14 +335,11 @@ void nexLoop(NexTouch *nex_listen_list[])
                 __buffer[i] = 0x00;
                 
                 if (0xFF == __buffer[1] && 0xFF == __buffer[2] && 0xFF == __buffer[3]){
-                    dbSerial.print("[nextion] Entering sleep mode");
+                    dbSerialPrintln("[nextion] Entering sleep mode");
 
-                    //NexScreen::eventCallback();
-
-                    if (__cb_pop){
-                        __cb_pop(__cbpop_ptr);
+                    if (__cb_onsleep){
+                        __cb_onsleep();
                     }
-
                 }
             }                
         }
@@ -358,7 +355,11 @@ void nexLoop(NexTouch *nex_listen_list[])
                 __buffer[i] = 0x00;
                 
                 if (0xFF == __buffer[1] && 0xFF == __buffer[2] && 0xFF == __buffer[3]){
-                    dbSerial.print("[nextion] Leaving sleep mode");
+                    dbSerialPrintln("[nextion] Leaving sleep mode");
+
+                    if (__cb_onwakeup){
+                        __cb_onwakeup();
+                    }
                 }
             }                                        
         }
